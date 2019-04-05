@@ -1,4 +1,6 @@
-import glob, os, zipfile, tarfile
+import glob, os, zipfile, tarfile, csv, html, json
+from pathlib import Path
+from operator import itemgetter
 
 ### BEGINNING OF FUNCTIONS
 
@@ -12,12 +14,78 @@ def extract_zip(zip_file_name, output_dir):
 		zip_file.extractall(output_dir)
 	return
 
+def import_playlists(gpm_playlist_dir):
+	playlist_list = []
+	for folder in glob.glob(os.path.join(gpm_playlist_dir, '*/')):
+		playlist_list.append(folder)
+	return playlist_list
+
+def parse_playlist_metadata(metadata_file):
+	with open(metadata_file) as metadataCSV:
+		csv_data = list(csv.reader(metadataCSV))
+		playlist_data = {'title': html.unescape(csv_data[1][0]), 'owner': html.unescape(csv_data[1][1]), 'description': html.unescape(csv_data[1][2]), 'shared': html.unescape(csv_data[1][3]), 'deleted': html.unescape(csv_data[1][4]), 'data': []}
+	return playlist_data
+
+def parse_track_data(track_file):
+	with open(track_file) as trackfileCSV:
+		csv_data = list(csv.reader(trackfileCSV))
+		track_data = {'title': html.unescape(csv_data[1][0]), 'album': html.unescape(csv_data[1][1]), 'artist': html.unescape(csv_data[1][2]), 'duration': html.unescape(csv_data[1][3]), 'rating': html.unescape(csv_data[1][4]), 'play_count': html.unescape(csv_data[1][5]), 'removed': html.unescape(csv_data[1][6]), 'playlist_index': html.unescape(csv_data[1][7])}
+	return track_data
+
 ### END OF FUNCTIONS
 ### BEGINNING OF APP
-takeout_dir = input("Please input the path to your Google Takeout archive: ")
-for filename in glob.glob(os.path.join(takeout_dir, 'takeout-*')):
-	if (filename.endswith("tgz")):
-		extract_tar(filename, takeout_dir)
-	elif (filename.endswith("zip")):
-		extract_zip(filename, takeout_dir)
+
+# Get directory to do work in
+takeout_dir = Path(input("Please input the path to your Google Takeout archive: "))
+# Find and extract the Takeout archive
+takeout_file = glob.glob(os.path.join(takeout_dir, 'takeout-*'))[0]
+if Path(takeout_file).is_file():
+	if (takeout_file.endswith("tgz")):
+		extract_tar(takeout_file, takeout_dir)
+	elif (takeout_file.endswith("zip")):
+		extract_zip(takeout_file, takeout_dir)
+	else:
+		print(takeout_file, "does not appear to be a .tgz or a .zip file.")
+else:
+	print("Cannot find a valid Takeout archive.")
+
+# Begin traversal of extracted Takeout archive
+if Path(os.path.join(takeout_dir, 'Takeout','Google Play Music')).is_dir():
+	gpm_dir=os.path.join(takeout_dir, 'Takeout','Google Play Music')
+	# Playlists
+	if Path(os.path.join(gpm_dir, 'Playlists')).is_dir():
+		# Initialize empty list for playlist dicts
+		playlists_list = []
+		# Import playlists to parse
+		playlists = import_playlists(os.path.join(gpm_dir, 'Playlists'))
+		# Begin to parse playlists
+		for l in playlists:
+			# Begin to parse playlist metadata
+			# Initialize empty dict for playlist data
+			playlist_data = {}
+			# Check to make sure Metadata.csv exists and is a file
+			metadata_file = os.path.join(l, 'Metadata.csv')
+			if Path(metadata_file).is_file():
+				playlist_data = parse_playlist_metadata(metadata_file)
+				playlists_list.append(playlist_data)
+			# End of parse playlist metadata
+			# Begin to parse playlist track data
+			track_dir = os.path.join(l, 'Tracks')
+			if Path(track_dir).is_dir():
+				track_files = glob.glob(os.path.join(track_dir, '*.csv'))
+				for f in track_files:
+					track_data = parse_track_data(f)
+					playlists_list[-1]['data'].append(track_data)
+				playlists_list[-1]['data'] = sorted(playlists_list[-1]['data'], key=itemgetter('playlist_index'))
+		for l in playlists_list:
+			print(json.dumps(l, indent=2))
+		#print(json.dumps(playlists_list[-1], indent=2))
+	# End of Playlists
+	# Radio Stations									
+	if Path(os.path.join(gpm_dir, 'Radio Stations')).is_dir():
+		var='yes'
+	# Tracks
+	if Path(os.path.join(gpm_dir, 'Tracks')).is_dir():
+		var='no'
+# Make sure the Takeout archive contains 
 ### END OF APP
