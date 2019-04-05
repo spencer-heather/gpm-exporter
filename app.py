@@ -1,8 +1,8 @@
-import glob, os, zipfile, tarfile, csv, html, json
+import glob, os, zipfile, tarfile, csv, html, json, argparse, textwrap
 from pathlib import Path
 from operator import itemgetter
 
-### BEGINNING OF FUNCTIONS
+### FUNCTIONS
 
 def extract_tar(tar_file_name, output_dir):
 	with tarfile.open(tar_file_name,"r:gz") as tar_file:
@@ -48,11 +48,39 @@ def parse_track_data(track_file):
 		}
 	return track_data
 
-### END OF FUNCTIONS
+
+### VARIABLES
+
+valid_output_formats = ['plex', 'spotify', 'json', 'm3u']
+
+
+### PARSE ARGUMENTS
+
+parser = argparse.ArgumentParser(description="Parse Google Takeout data", 
+	formatter_class=argparse.RawTextHelpFormatter)
+parser.add_argument("-t", "--takeout_dir", type=str, dest="takeout_dir", help="Path to directory containing the Google Takeout archive")
+parser.add_argument("-o", "--output", type=str, dest="output",
+	help=textwrap.dedent('''\
+		Target output type:
+		plex
+		spotify
+		json
+		m3u
+		'''))
+args = parser.parse_args()
+
+takeout_dir = args.takeout_dir
+output = args.output
+
+
 ### BEGINNING OF APP
 
 # Get directory to do work in
-takeout_dir = Path(input("Please input the path to your Google Takeout archive: "))
+if (takeout_dir is None):
+	takeout_dir = Path(input("Please input the path to your Google Takeout archive: "))
+while (output not in valid_output_formats):
+	output = input("Specify output format. Valid outputs are:\n{}\n▶ ".format("\n".join(valid_output_formats)))
+
 # Find and extract the Takeout archive
 takeout_file = glob.glob(os.path.join(takeout_dir, 'takeout-*'))[0]
 if Path(takeout_file).is_file():
