@@ -23,13 +23,29 @@ def import_playlists(gpm_playlist_dir):
 def parse_playlist_metadata(metadata_file):
 	with open(metadata_file) as metadataCSV:
 		csv_data = list(csv.reader(metadataCSV))
-		playlist_data = {'title': html.unescape(csv_data[1][0]), 'owner': html.unescape(csv_data[1][1]), 'description': html.unescape(csv_data[1][2]), 'shared': html.unescape(csv_data[1][3]), 'deleted': html.unescape(csv_data[1][4]), 'data': []}
+		playlist_data = { \
+		'title': html.unescape(csv_data[1][0]), \
+		'owner': html.unescape(csv_data[1][1]), \
+		'description': html.unescape(csv_data[1][2]), \
+		'shared': html.unescape(csv_data[1][3]), \
+		'deleted': html.unescape(csv_data[1][4]), \
+		'data': [] \
+		}
 	return playlist_data
 
 def parse_track_data(track_file):
 	with open(track_file) as trackfileCSV:
 		csv_data = list(csv.reader(trackfileCSV))
-		track_data = {'title': html.unescape(csv_data[1][0]), 'album': html.unescape(csv_data[1][1]), 'artist': html.unescape(csv_data[1][2]), 'duration': html.unescape(csv_data[1][3]), 'rating': html.unescape(csv_data[1][4]), 'play_count': html.unescape(csv_data[1][5]), 'removed': html.unescape(csv_data[1][6]), 'playlist_index': html.unescape(csv_data[1][7])}
+		track_data = { \
+		'title': html.unescape(csv_data[1][0]), \
+		'album': html.unescape(csv_data[1][1]), \
+		'artist': html.unescape(csv_data[1][2]), \
+		'duration': html.unescape(csv_data[1][3]), \
+		'rating': html.unescape(csv_data[1][4]), \
+		'play_count': html.unescape(csv_data[1][5]), \
+		'removed': html.unescape(csv_data[1][6]), \
+		'playlist_index': html.unescape(csv_data[1][7]) \
+		}
 	return track_data
 
 ### END OF FUNCTIONS
@@ -71,12 +87,14 @@ if Path(os.path.join(takeout_dir, 'Takeout','Google Play Music')).is_dir():
 			# End of parse playlist metadata
 			# Begin to parse playlist track data
 			track_dir = os.path.join(l, 'Tracks')
+			# Check to ensure Tracks dir exists
 			if Path(track_dir).is_dir():
 				track_files = glob.glob(os.path.join(track_dir, '*.csv'))
 				for f in track_files:
 					track_data = parse_track_data(f)
 					playlists_list[-1]['data'].append(track_data)
 				playlists_list[-1]['data'] = sorted(playlists_list[-1]['data'], key=itemgetter('playlist_index'))
+		# TEMPORARY OUTPUT JUST FOR TESTING
 		for l in playlists_list:
 			print(json.dumps(l, indent=2))
 		#print(json.dumps(playlists_list[-1], indent=2))
